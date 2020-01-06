@@ -1,0 +1,283 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1404\cocoasubrtf340
+{\fonttbl\f0\fnil\fcharset0 Avenir-Light;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww12140\viewh11400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs28 \cf0 #!/usr/bin/env python\
+# -*- coding: utf-8 -*-\
+\
+## ~ LIBRARY IMPORTATION ~ ##\
+from os import * #Bash commands\
+from subprocess import * #Bash commands\
+import curses #Terminal display\
+import math #Math Operations\
+#############################\
+\
+## ~ START SUDO - DO NOT TOUCH ~ ##\
+sudo_password = '1234'\
+command = 'sudo -i'.split()\
+p = Popen(['sudo', '-S'] + command, stdin=PIPE, stderr=PIPE,\
+          universal_newlines=True)\
+sudo_prompt = p.communicate(sudo_password + '\\n')[1]\
+####################################\
+\
+## ~ START CURSES ~ ##\
+stdscr = curses.initscr() #Standard Screen\
+curses.noecho() #Avoids printing input\
+curses.cbreak() #Character broken input\
+stdscr.keypad(1) #Return characters value\
+height = 23 #Terminal window height\
+width = 79 #Terminal window width\
+pad = curses.newpad(10000, 128) #Main Screen ~ Allows scrolling\
+######################\
+\
+## ~ GLOBAL VARIABLES ~ ##\
+prints = 0\
+##########################\
+\
+## ~ FUNCTIONS ~ ##\
+def start(welcome):\
+	presentUSB = findUSB()\
+	if welcome:\
+		astdprnt(' USB\'b2 - Trademark & Copyright 2016 ', curses.A_STANDOUT)\
+		stdprnt(' ')\
+	if len(presentUSB[0]) >= 2:\
+		mountUSB(presentUSB)\
+		choice = chooseUSB(presentUSB)\
+		stdprnt(str(chooseFile(choice, listFile(choice, False))))\
+		\
+	else:\
+		stdprnt('Connect the missing USB device(s). Press Enter')\
+		stdprnt(' ')\
+		userInput = stdscr.getch()\
+		if userInput == 10:\
+			start(False)\
+		else:\
+			finalize(findUSB())\
+	finalize(findUSB())\
+			\
+	\
+def finalize(presentUSB):\
+	prints = 0\
+	pad.clear()\
+	pad.refresh(0,0,0,0,height,width)\
+	unmountUSB(presentUSB)\
+	stdscr.keypad(0)\
+	curses.nocbreak()\
+	curses.echo()\
+	curses.endwin()\
+	exit()\
+\
+def findUSB():\
+	USB = []\
+	USBlist = []\
+	USBname = []\
+	list = popen('sudo blkid').read().split('\\n')\
+	list.pop(len(list)-1)\
+	for i in range(0, len(list)):\
+		list[i] = list[i].split()\
+	for a in list:\
+		if a[len(a)-1] == 'TYPE="vfat"':\
+			USBlist.append(a)\
+	for i in USBlist:\
+		name = ''\
+		for idx in range(1, len(i)):\
+			if i[idx][0] == 'U':\
+				break\
+			else:\
+				name += ' ' + i[idx]\
+		USBname.append(name[8:len(name)-1])\
+	USB.append(USBlist)\
+	USB.append(USBname)\
+	return USB\
+\
+def mountUSB(USBdev):\
+	usb1name = USBdev[1][0]\
+	usb1path = USBdev[0][0][0][:-1]\
+	usb2name = USBdev[1][1]\
+	usb2path = USBdev[0][1][0][:-1]\
+	system('sudo mkdir '+"'"+usb1name+"'")\
+	system('sudo mount '+ usb1path + " '" + usb1name + "'")\
+	system('sudo mkdir '+"'"+usb2name+"'")\
+	system('sudo mount '+ usb2path + " '" + usb2name + "'")\
+	\
+def unmountUSB(presentUSB):\
+	system('sudo umount ' +"'"+presentUSB[1][0]+"'")\
+	system('sudo umount ' +"'"+presentUSB[1][1]+"'")\
+	system('rm -rf ' +"'"+presentUSB[1][0]+"'")\
+	system('rm -rf ' +"'"+presentUSB[1][1]+"'")\
+def chooseUSB(presentUSB):\
+	astdprnt('Choose a source: ', curses.A_BOLD)\
+	stdprnt(' ')\
+	tbprnt('0) ' + presentUSB[1][0])\
+	tbprnt('1) ' + presentUSB[1][1])\
+	top = curses.getsyx()[0]-2\
+	bottom = curses.getsyx()[0]-1\
+	stdprnt(' ')\
+	stdscr.move(top, 4)\
+	while True:\
+		chooseSource = stdscr.getch()\
+		if chooseSource != 10:\
+			if chooseSource == 259:\
+				if curses.getsyx()[0] > top:\
+					stdscr.move(curses.getsyx()[0] - 1, 4)\
+			elif chooseSource == 258: \
+				if curses.getsyx()[0] < bottom:\
+					stdscr.move(curses.getsyx()[0] + 1, 4)\
+			else:\
+				finalize(findUSB())\
+		elif curses.getsyx()[0] == top:\
+			listFile(presentUSB[1][0], True)\
+			return presentUSB[1][0]\
+		elif curses.getsyx()[0] == bottom:\
+			listFile(presentUSB[1][1], True)\
+			return presentUSB[1][1]\
+\
+def listFile(folder, printFiles):\
+	fileList = popen('ls ' + "'" + folder + "'").read().split('\\n')\
+	fileList.remove('')\
+	if printFiles:\
+		if len(fileList) == 0:\
+					stdprnt('There are no existing files in ' + USBname[0] + '.')\
+					chooseUSB(findUSB())\
+		else:\
+			p = 1\
+			for i in fileList:\
+				if isFolder(i):\
+					astdprnt(' ' + str(p) + '. ' + i, curses.A_BOLD)\
+				else:\
+					stdprnt(' ' + str(p) + '. ' + i)\
+				p+=1\
+			stdprnt(' ')\
+		return fileList\
+	else:\
+		return fileList\
+	\
+	\
+\
+def isFolder(file):\
+	if file.count('.') > 1:\
+		for i in file:\
+			if i == '.':\
+				isFolder(file[file.index(i)+1:])			\
+	elif file.count('.') == 1:\
+		if file.index('.') == len(file) - 4:\
+			return False\
+		elif file.index('.') == len(file) - 5:\
+			return False\
+		else:\
+			return True\
+	else:\
+		return True\
+	\
+def chooseFile(folder, fileList):\
+	global prints\
+	bottom = curses.getsyx()[0]-2\
+	try:\
+		stdscr.move(bottom, 0)\
+	except:\
+		pass\
+	pages = int(math.ceil(prints/height))\
+	topcornerY = (height*pages)\
+	filePos = len(fileList)\
+	while True:\
+		choice = stdscr.getch()\
+		pos = pad.getyx()[0]\
+		if choice != 10:\
+			if choice == 259:\
+				if filePos > 1:\
+					if curses.getsyx()[0] == 0:\
+						topcornerY -= height\
+						stdscr.move(height, 0)\
+						pad.refresh(topcornerY,0,0,0,height,width)\
+					else:\
+						stdscr.move(curses.getsyx()[0] - 1, 0)\
+						filePos -= 1\
+			elif choice == 258:\
+				if filePos < len(fileList):\
+					if curses.getsyx()[0] == height:\
+						topcornerY += height\
+						stdscr.move(0, 0)\
+						pad.refresh(topcornerY,0,0,0,height,width)\
+						\
+					else:\
+						stdscr.move(curses.getsyx()[0] + 1, 0)\
+						filePos += 1\
+			else:\
+				finalize(findUSB())\
+		else:\
+			break\
+	if isFolder(fileList[filePos-1]):\
+		prints = 0\
+		pad.clear()\
+		pad.refresh(0,0,0,0,height,width)\
+		astdprnt('Open folder '+fileList[filePos-1]+'?', curses.A_BOLD)\
+		stdprnt(' ')\
+		tbprnt('0) NO')\
+		tbprnt('1) YES')\
+		top = curses.getsyx()[0]-2\
+		bottom = curses.getsyx()[0]-1\
+		stdprnt(' ')\
+		stdscr.move(top, 4)\
+		while True:\
+			chooseSource = stdscr.getch()\
+			if chooseSource != 10:\
+				if chooseSource == 259:\
+					if curses.getsyx()[0] > top:\
+						stdscr.move(curses.getsyx()[0] - 1, 4)\
+				elif chooseSource == 258: \
+					if curses.getsyx()[0] < bottom:\
+						stdscr.move(curses.getsyx()[0] + 1, 4)\
+				else:\
+					finalize(findUSB())\
+			elif curses.getsyx()[0] == bottom:\
+				chooseFile(folder + "/" + fileList[filePos-1], listFile(folder + "/" + fileList[filePos-1], True))\
+			elif curses.getsyx()[0] == top:\
+				return folder + "/" + fileList[filePos-1]\
+	else:\
+		return folder + "'/" + fileList[filePos-1]\
+\
+# ~ PRINTING ~ #\
+# Standard Print\
+def stdprnt(str):\
+	global prints\
+	pad.addstr(prints,0,str)\
+	pad.refresh(0 + height*(prints/height),0,0,0,height,width)\
+	prints += 1\
+	stdscr.move(prints%height,0)\
+	stdscr.refresh()\
+	\
+# Standard Print w/ Attribute\
+def astdprnt(str, attr):\
+	global prints\
+	pad.addstr(prints,0,str,attr)\
+	pad.refresh(0 + height*(prints/height),0,0,0,height,width)\
+	prints += 1\
+	stdscr.move(prints%height,0)\
+	stdscr.refresh()\
+	\
+# Tab Print\
+def tbprnt(str):\
+	global prints\
+	pad.addstr(prints,4,str)\
+	pad.refresh(0 + height*(prints/height),0,0,0,height,width)\
+	prints += 1\
+	stdscr.move(prints%height,0)\
+	stdscr.refresh()\
+	\
+# Tab Print w/ Attribute\
+def atbprnt(str, attr):\
+	global prints\
+	pad.addstr(prints,4,str,attr)\
+	pad.refresh(0 + height*(prints/height),0,0,0,height,width)\
+	prints += 1\
+	stdscr.move(prints%height,0)\
+	stdscr.refresh()\
+################\
+\
+\
+###################\
+\
+start(True)\
+}

@@ -1,0 +1,338 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1404\cocoasubrtf340
+{\fonttbl\f0\fnil\fcharset0 Avenir-Light;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww12140\viewh11400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs28 \cf0 #!/usr/bin/env python\
+# -*- coding: utf-8 -*-\
+# Importing Python libraries to call bash commands\
+from os import *\
+from subprocess import *\
+import curses\
+import time\
+\
+########### ~ START SUDO - DO NOT TOUCH ~ ##################\
+sudo_password = '1234'\
+command = 'sudo -i'.split()\
+p = Popen(['sudo', '-S'] + command, stdin=PIPE, stderr=PIPE,\
+          universal_newlines=True)\
+sudo_prompt = p.communicate(sudo_password + '\\n')[1]\
+############################################################\
+\
+######## MAIN VARIABLES ###################\
+# ~ AMPTY LIST OF CONNECTED USBS ~ #\
+USBlist = []\
+USBname = []\
+USB = []\
+# ~ SOURCE / DESTINATION ~ #\
+source = ''\
+destination = ''\
+sNum = 0\
+dNum = 1\
+# ~ PRINT COUNTER ~ #\
+prints = 0\
+############################################\
+\
+###### INITIALIZE CURSES ######\
+stdscr = curses.initscr()\
+height = 23\
+width = 79\
+pad = curses.newpad(1000,128)\
+curses.noecho()\
+curses.cbreak()\
+stdscr.keypad(1)\
+###############################\
+           \
+\
+def stdprnt(str):\
+	global prints\
+	pad.addstr(prints,0,str)\
+	pad.refresh(0 + height*(prints/height),0,0,0,height,width)\
+	prints += 1\
+	stdscr.move(prints%height,0)\
+	stdscr.refresh()\
+def astdprnt(str, attr):\
+	global prints\
+	pad.addstr(prints,0,str,attr)\
+	pad.refresh(0 + height*(prints/height),0,0,0,height,width)\
+	prints += 1\
+	stdscr.move(prints%height,0)\
+	stdscr.refresh()\
+def tbprnt(str):\
+	global prints\
+	pad.addstr(prints,4,str)\
+	pad.refresh(0 + height*(prints/height),0,0,0,height,width)\
+	prints += 1\
+	stdscr.move(prints%height,0)\
+	stdscr.refresh()\
+def atbprnt(str, attr):\
+	global prints\
+	pad.addstr(prints,4,str,attr)\
+	pad.refresh(0 + height*(prints/height),0,0,0,height,width)\
+	prints += 1\
+	stdscr.move(prints%height,0)\
+	stdscr.refresh()\
+\
+def finalize():\
+	#global USBlist, USBname, USB, source, destination, sNum, dNum\
+	try:\
+		stdprnt('Do you want to exit the program?')\
+		stdprnt(' ')\
+		tbprnt('0) NO')\
+		tbprnt('1) YES')\
+		top = curses.getsyx()[0]-2\
+		bottom = curses.getsyx()[0]-1\
+		stdscr.move(top, 4)\
+		while True:\
+			choice = stdscr.getch()\
+			if choice != 10:\
+				if choice == 259 and curses.getsyx()[0] > top:\
+					stdscr.move(curses.getsyx()[0] - 1, 4)\
+				elif choice == 258 and curses.getsyx()[0] < bottom:\
+					stdscr.move(curses.getsyx()[0] + 1, 4)\
+			elif curses.getsyx()[0] == top:\
+				choice = 0\
+				break\
+			elif curses.getsyx()[0] == bottom:\
+				choice = 1\
+				break\
+		if choice == 1:			\
+		######## UNMOUNT AND ERASE #########\
+			system('sudo umount ' + USB[0])\
+			system('sudo umount ' + USB[1])\
+			system('sudo rm -rf usb1')\
+			system('sudo rm -rf usb2')\
+			#### FINALIZE CURSES #####\
+			curses.echo()\
+			curses.nocbreak()\
+			stdscr.keypad(0)\
+			curses.endwin()\
+			############################\
+			exit()\
+		####################################\
+		\
+		####### RESTART #######\
+		elif choice == 0:\
+			stdprnt('--------------------')\
+			start(1)\
+		#######################\
+		\
+		\
+		else:\
+			raise ValueError('')\
+			\
+	except ValueError:\
+		print '\\nPlease, try again.'\
+		finalize()\
+	except IndexError:\
+		exit()\
+\
+def start(n):\
+	#~ global USBlist, USBname, USB, source, destination, sNum, dNum\
+	if n == 1:\
+		astdprnt(' USB\'b2 - Trademark & Copyright 2016 ', curses.A_STANDOUT)\
+		stdprnt(' ')\
+		start(0)\
+	else:\
+		while True:		\
+	############ GET CONNECTED USBS #############\
+			list = popen('sudo blkid').read().split('\\n')\
+			list.pop(len(list)-1)\
+	#############################################\
+			\
+			\
+\
+	############# POPULATE USB LIST ##############\
+			for i in range(0, len(list)):\
+				list[i] = list[i].split()\
+			for a in list:\
+				if a[len(a)-1] == 'TYPE="vfat"':\
+					USBlist.append(a)\
+			for i in USBlist:\
+				name = ''\
+				for idx in range(1, len(i)):\
+					if i[idx][0] == 'U':\
+						break\
+					else:\
+						name += ' ' + i[idx]\
+				USBname.append(name[8:len(name)-1])\
+	################################################\
+			\
+			if len(USBlist) < 2:\
+				stdprnt('There are missing USB flash drives. Please connect them then press ENTER or RETURN to proceed.')\
+				stdprnt('')\
+				a = stdscr.getch()\
+				if a == 10:\
+					stdscr.refresh()\
+					start(0)\
+				else:\
+					finalize()\
+		\
+	############################# USER DEFINES SOURCE AND DESTINATION ##########################################\
+			try:\
+				astdprnt('Choose a source: ', curses.A_BOLD)\
+				tbprnt('0) ' + USBname[0])\
+				tbprnt('1) ' + USBname[1])\
+				top = curses.getsyx()[0]-2\
+				bottom = curses.getsyx()[0]-1\
+				stdprnt(' ')\
+				stdscr.move(top, 4)\
+				while True:\
+					chooseSource = stdscr.getch()\
+					if chooseSource != 10:\
+						if chooseSource == 259:\
+							if curses.getsyx()[0] > top:\
+								stdscr.move(curses.getsyx()[0] - 1, 4)\
+						elif chooseSource == 258: \
+							if curses.getsyx()[0] < bottom:\
+								stdscr.move(curses.getsyx()[0] + 1, 4)\
+						else:\
+							finalize()\
+					elif curses.getsyx()[0] == top:\
+						chooseSource = 0\
+						break\
+					elif curses.getsyx()[0] == bottom:\
+						chooseSource = 1\
+						break\
+				\
+				if chooseSource == 0:\
+					source = USBname[0]\
+					sNum = 0\
+					destination = USBname[1]\
+					dNum = 1\
+				elif chooseSource == 1:\
+					source = USBname[1]\
+					sNum = 1\
+					destination = USBname[0]\
+					dNum = 0\
+			except ValueError:\
+				finalize()\
+	############################################################################################################\
+			\
+			\
+			\
+	############################ PRINT USB SOURCE AND DESTINATION #########################\
+			astdprnt('  <SOURCE USB>: ' + source + ' <DESTINATION USB>:  ' + destination + '  ', curses.A_STANDOUT)\
+			stdprnt(' ')\
+	#######################################################################################\
+			\
+			\
+			\
+			USB = [USBlist[sNum][0][:-1], USBlist[dNum][0][:-1]]\
+			copy = True\
+			if len(USBlist) > 1:\
+				#Mount the USBs\
+				## Mount USB1\
+				system('sudo mkdir usb1')\
+				system('sudo mount ' + USB[0] +' usb1')\
+				## Mount USB2 \
+				system('sudo mkdir usb2')\
+				system('sudo mount ' + USB[1] +' usb2')\
+				\
+				#Print files in USB1\
+				fileList = popen('ls usb1').read().split('\\n')\
+				fileList.remove('')\
+				top = pad.getyx()[0]\
+				if len(fileList) == 0:\
+					stdprnt('There are no existing files in ' + USBname[0] + '.')\
+					finalize()\
+				else:\
+					p = 1\
+					for i in fileList:\
+						stdprnt(' ' + str(p) + '. ' + i)\
+						p+=1\
+				\
+				####################  CHOOSING THE FILE ##################################\
+				padBottom = pad.getyx()[0]-1\
+				bottom = curses.getsyx()[0]-1\
+				stdscr.move(bottom, 0)\
+				pages = (prints/height)\
+				topcornerY = (height*pages) - height + 1\
+				filePos = len(fileList)\
+				while True:\
+					choice = stdscr.getch()\
+					pos = pad.getyx()[0]\
+					if choice != 10:\
+						if choice == 259 and  pos > top:\
+							if curses.getsyx()[0] == 0:\
+								stdscr.move(23, 0)\
+								topcornerY -= 23\
+								pad.refresh(topcornerY,0,0,0,height,width)\
+								filePos -= 1\
+							else:\
+								stdscr.move(curses.getsyx()[0] - 1, 0)\
+								filePos -= 1\
+						elif choice == 258:\
+							if curses.getsyx()[0] == height:\
+								stdscr.move(0, 0)\
+								topcornerY += 23\
+								pad.refresh(topcornerY,0,0,0,height,width)\
+								filePos += 1\
+							else:\
+								stdscr.move(curses.getsyx()[0] + 1, 0)\
+								filePos += 1\
+						else:\
+							finalize()\
+					else:\
+						break\
+				###########################################################################		\
+						\
+				###################### CONFIRMING THE FILE CHOICE #########################\
+				stdprnt(' ')\
+				astdprnt('Do you want to send ' + fileList[filePos-1] + '?', curses.A_BOLD)\
+				stdprnt(' ')\
+				tbprnt('0) NO')\
+				tbprnt('1) YES')\
+				top = curses.getsyx()[0]-2\
+				bottom = curses.getsyx()[0]-1\
+				stdscr.move(top, 4)\
+				confirm = 0\
+				while True:\
+					confirm = stdscr.getch()\
+					if confirm != 10:\
+						if confirm == 259 and curses.getsyx()[0] > top:\
+							stdscr.move(curses.getsyx()[0] - 1, 4)\
+						elif confirm == 258 and curses.getsyx()[0] < bottom:\
+							stdscr.move(curses.getsyx()[0] + 1, 4)\
+					elif curses.getsyx()[0] == top:\
+						confirm = 0\
+						break\
+					elif curses.getsyx()[0] == bottom:\
+						confirm = 1\
+						break\
+				if confirm == 1:\
+					file = "'"+fileList[filePos-1].replace("'","\\'")+"'"\
+				elif confirm == 0:\
+					start(0)\
+				#########################################################################\
+				\
+				\
+				\
+				stdprnt('Do you want to Copy or Move?')\
+				stdprnt(' ')\
+				tbprnt('0) COPY')\
+				tbprnt('1) MOVE')\
+				copyMove = 0\
+				if schoice == 'exit':\
+					finalize()\
+				else:\
+					copyMove = int(choice)\
+					if copyMove == 0:\
+						copy = True\
+					elif copyMove == 1:\
+						copy = False\
+					\
+				\
+				\
+				#Move/Copy files\
+				if file != '':\
+					if copy:\
+						system('sudo cp usb1/' + file + ' usb2')\
+					else:\
+						system('sudo mv usb1/' + file + ' usb2')\
+					print 'File sent.'\
+\
+\
+start(1)\
+}
